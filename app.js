@@ -2,8 +2,19 @@ const tileDisplay = document.querySelector(".tile-container");
 const keyboard = document.querySelector(".key-container");
 const messageDisplay = document.querySelector(".message-container");
 
-const wordle = "SUPER";
+let wordle;
 
+const getWordle = () => {
+  fetch("http://localhost:8000/word")
+    .then((res) => res.json())
+    .then((data) => {
+      console.log(data);
+      wordle = data.toUpperCase();
+    })
+    .catch((err) => console.err(err.message));
+};
+
+getWordle();
 const keys = [
   "Q",
   "W",
@@ -72,16 +83,18 @@ keys.forEach((key) => {
 });
 
 const handleClick = (key) => {
-  console.log("clicked", key);
-  if (key === "«") {
-    deleteLetter();
-    return;
+  if (!isGameOver) {
+    console.log("clicked", key);
+    if (key === "«") {
+      deleteLetter();
+      return;
+    }
+    if (key === "ENTER") {
+      checkRow();
+      return;
+    }
+    addLetter(key);
   }
-  if (key === "ENTER") {
-    checkRow();
-    return;
-  }
-  addLetter(key);
 };
 
 const addLetter = (letter) => {
@@ -112,23 +125,34 @@ const deleteLetter = () => {
 const checkRow = () => {
   const guess = guessRows[currentRow].join("");
   if (currentTile > 4) {
-    console.log("Guess: ", guess, "Word: ", wordle);
-    flipTile();
-    if (wordle == guess) {
-      showMessage("You Win!");
-      isGameOver = true;
-      return;
-    } else {
-      if (currentRow >= 5) {
-        isGameOver = true;
-        showMessage("You Lose!");
-        return;
-      }
-      if (currentRow < 5) {
-        currentRow++;
-        currentTile = 0;
-      }
-    }
+    fetch(`http://localhost:8000/check/?word=${guess}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data);
+        if (data === "Entry word not found") {
+          showMessage("Word not in list");
+          return;
+        } else {
+          console.log("Guess: ", guess, "Wordle: ", wordle);
+          flipTile();
+          if (wordle == guess) {
+            showMessage("You Win!");
+            isGameOver = true;
+            return;
+          } else {
+            if (currentRow >= 5) {
+              isGameOver = false;
+              showMessage("You Lose!");
+              return;
+            }
+            if (currentRow < 5) {
+              currentRow++;
+              currentTile = 0;
+            }
+          }
+        }
+      })
+      .catch((err) => console.err(err.message));
   }
 };
 
